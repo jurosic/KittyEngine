@@ -4,7 +4,6 @@
 
 #ifndef KITTYENGINE_H
 #define KITTYENGINE_H
-#endif
 
 #ifndef __STDBOOL_H
 #include <stdbool.h>
@@ -39,9 +38,9 @@ enum Kitty_ErrorCodes {
 };
 
 enum Kitty_ObjType {
-    KCIRCLE,
-    RECTANGLE,
-    LINE
+    KITTY_OBJECT_CIRCLE,
+    KITTY_OBJECT_RECTANGLE,
+    KITTY_OBJECT_LINE
 };
 
 typedef struct {
@@ -57,27 +56,27 @@ typedef struct {
 } Kitty_ColorGradient;
 
 typedef struct {
-    float x;
-    float y;
+    int x;
+    int y;
     float radius;
     bool filled;
     Kitty_Color color;
 } Kitty_ObjCircle;
 
 typedef struct {
-    float x;
-    float y;
-    float width;
-    float height;
+    int x;
+    int y;
+    int width;
+    int height;
     bool filled;
     Kitty_Color color;
 } Kitty_ObjRectangle;
 
 typedef struct {
-    float x1;
-    float y1;
-    float x2;
-    float y2;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
     Kitty_Color color;
 } Kitty_ObjLine;
 
@@ -117,6 +116,7 @@ int Kitty_FlipBuffers();
 ///@brief Updates the engine state. Should be called once per frame.
 ///@return Returns 0 on success, or an error code on failure.
 int Kitty_UpdateObjectState();
+int Kitty_RenderObjects();
 
 void Kitty_Clock(int fps);
 
@@ -126,21 +126,8 @@ int Kitty_RemoveObject(size_t index);
 
 int Kitty_GetObject(size_t index, Kitty_Object* out_obj);
 
-/*
- * Kitty Engine Private Functions
- */
+Kitty_Object* Kitty_CreateCircle(int x, int y, float radius, bool filled, Kitty_Color color);
+Kitty_Object* Kitty_CreateRectangle(int x, int y, int width, int height, bool filled, Kitty_Color color);
+Kitty_Object* Kitty_CreateLine(int x1, int y1, int x2, int y2, Kitty_Color color);
 
-/*
-///@brief Creates the memory space (dynamic array) that houses objects.
-static int k_CreateObjectMSpace();
-///@brief Allocates more space in the object memory space.
-static int k_AllocObjectMSpace();
-///@brief Allocates less space in the object memory space.
-static int k_UnallocObjectMSpace();
-///@brief Checks whether reallocation is needed and performs it.
-static int k_ReallocObjectMSpace();
-///@brief Frees (resets) the object memory space.
-static int k_FreeObjectMSpace();
-///@brief Destroys the object memory space.
-static int k_DestroyObjectMSpace();
-*/
+#endif // KITTYENGINE_H

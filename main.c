@@ -10,9 +10,15 @@ int main(void){
         return result; // Return error code
     }
 
-    bool flip = true;
+    Kitty_Object *rect = Kitty_CreateRectangle(100, 100, 200, 150, true, (Kitty_Color){255, 0, 0, 255});
+    Kitty_Object *line = Kitty_CreateLine(50, 50, 300, 300, (Kitty_Color){0, 255, 0, 255});
+    Kitty_Object *circle = Kitty_CreateCircle(400, 300, 75.0f, false, (Kitty_Color){0, 0, 255, 255});
 
-    // Main loop
+    Kitty_AddObject(*rect);
+    Kitty_AddObject(*line);
+    Kitty_AddObject(*circle);
+
+
     bool running = true;
     SDL_Event event;
     while (running) {
@@ -23,19 +29,10 @@ int main(void){
             }
         }
 
-        if (flip) {
-            Kitty_ClearScreen((Kitty_Color){255, 0, 0, 255}); // Clear screen to red
-        } else {
-            Kitty_ClearScreen((Kitty_Color){0, 0, 255, 255}); // Clear screen to blue
-        }
+        Kitty_RenderObjects();
 
-        flip = !flip;
-
-        // Here you would add rendering of objects
-
-        Kitty_Clock(2); // Cap at 60 FPS
+        Kitty_Clock(60); // Cap at 60 FPS
         Kitty_FlipBuffers(); // Present the rendered frame
-        printf("Flip!\n");
     }
 
     Kitty_Quit();
