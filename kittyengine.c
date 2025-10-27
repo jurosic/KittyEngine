@@ -378,6 +378,13 @@ static int k_FreeObjectMSpace(){
     if(!object_mspace){
         return KITTY_MEMORYSPACE_NOT_INITIALIZED; // Memory space not initialized
     }
+
+    //loop thru objects and free their data
+    for (size_t i = 0; i < object_mspace->allocation_count; i++){
+        free(object_mspace->objects[i].data);
+        object_mspace->objects[i].data = NULL;
+    }
+
     free(object_mspace->objects);
     object_mspace->objects = NULL;
     object_mspace->total_allocated = 0;
