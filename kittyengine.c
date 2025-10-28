@@ -1,5 +1,7 @@
 #include <stddef.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <sys/time.h>
 
 #include "kittyengine.h"
 
@@ -16,6 +18,12 @@ static int window_height = 600;
 static const size_t K_DEFAULT_OBJECT_MSPACE_SIZE = 1024 * 1024; // 1 MB
 
 static k_ObjectMSpace* object_mspace = NULL;
+
+static size_t frame_num = 0;
+static clock_t start_time = 0;
+static double frame_time = 0;
+
+static clock_t timer_1 = 0;
 
 //SDL VARS
 static SDL_Window* sdl_window = NULL;
@@ -53,6 +61,15 @@ int Kitty_Init(const char* title, int width, int height){
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         return KITTY_SDL_INIT_ERROR; // SDL initialization failed
     }
+
+    //init ttf
+    if (TTF_Init() == -1) {
+        SDL_Quit();
+        return KITTY_SDL_INIT_ERROR; // SDL_ttf initialization failed
+    }
+
+    //start time in ms
+    start_time = clock();
 
     sdl_window = SDL_CreateWindow(window_title,
                                   SDL_WINDOWPOS_CENTERED,
@@ -122,6 +139,11 @@ int Kitty_UpdateObjectState() {
 }
 
 int Kitty_RenderObjects() {
+    if (!sdl_renderer) {
+        return KITTY_SDL_RENDERER_NOT_INITIALIZED; // SDL renderer not initialized
+    }
+
+    clock_t start = clock();
     for (size_t i = 0; i < object_mspace->allocation_count; i++) {
         Kitty_Object obj = object_mspace->objects[i];
         // Render based on object type
@@ -245,6 +267,35 @@ int Kitty_RenderObjects() {
 
                 break;
 
+            case KITTY_OBJECT_TEXT:
+                //load font here to add multiple font support
+                Kitty_ObjText* text_obj = (typeof(Kitty_ObjText)*)obj.data;
+                TTF_Font* font = TTF_OpenFont("arial.ttf", 24); // Load a font
+                if (!font) {
+                    return KITTY_SDL_TTF_ERROR; // Font loading failed
+                }
+
+                SDL_Color sdl_color = {text_obj->color.r, text_obj->color.g, text_obj->color.b, text_obj->color.a};
+                SDL_Surface* text_surface = TTF_RenderText_Solid(font, text_obj->text, sdl_color);
+                if (!text_surface) {
+                    TTF_CloseFont(font);
+                    return KITTY_SDL_TTF_ERROR; // Text rendering failed
+                }
+                SDL_Texture* text_texture = SDL_CreateTextureFromSurface(sdl_renderer, text_surface);
+                if (!text_texture) {
+                    SDL_FreeSurface(text_surface);
+                    TTF_CloseFont(font);
+                    return KITTY_SDL_TTF_ERROR; // Texture creation failed
+                }
+                SDL_Rect text_rect = {text_obj->position.x, text_obj->position.y, text_surface->w, text_surface->h};
+                SDL_RenderCopy(sdl_renderer, text_texture, NULL, &text_rect);
+                SDL_DestroyTexture(text_texture);
+                SDL_FreeSurface(text_surface);
+                TTF_CloseFont(font);
+
+
+                break;
+
             case KITTY_OBJECT_MESH:
                 //turn mesh into triangles (wireframe for now)
 
@@ -314,7 +365,6 @@ int Kitty_RenderObjects() {
                                        position.y + (v2y * scale));
 
                     if (!m_obj->wire){
-                        //sorry but we gotta fill in the triangle
                         //simple scanline fill
                         int minY = (position.y + (v1y * scale)) < (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
                         int maxY = (position.y + (v1y * scale)) > (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
@@ -355,6 +405,8 @@ int Kitty_RenderObjects() {
                 return KITTY_UNKNOWN_ERROR; // Unknown object type
         }
     }
+    frame_num++;
+    frame_time = (clock() - start) * 1000.0 / CLOCKS_PER_SEC; // in milliseconds
     return KITTY_SUCCESS; // Success
 }
 
@@ -371,7 +423,7 @@ int Kitty_ClearObjects() {
 }
 
 void Kitty_Clock(int fps) {
-    SDL_Delay(1000 / fps);
+    SDL_Delay((1000 / fps) - (Kitty_GetFrameTime()));
 }
 
 int Kitty_AddObject(Kitty_Object obj) {
@@ -454,6 +506,28 @@ int Kitty_AddFaceToObjMesh(Kitty_Object* obj, Kitty_Face face, Kitty_Color face_
     mesh->face_colors[mesh->face_count] = face_color;
     mesh->face_count++;
     return KITTY_SUCCESS; // Success
+}
+
+size_t Kitty_GetFrameNumber() {
+    return frame_num;
+}
+
+clock_t Kitty_GetDeltaTime() {
+    return clock() - start_time;
+}
+
+double Kitty_GetFrameTime() {
+    return frame_time;
+}
+
+void Kitty_SetTimer1() {
+    timer_1 = clock();
+}
+
+bool Kitty_Timer1Trip(long milliseconds) {
+    clock_t current_time = clock();
+    long elapsed_time = (current_time - timer_1) * 1000 / CLOCKS_PER_SEC;
+    return elapsed_time >= milliseconds;
 }
 
 Kitty_Object* Kitty_CreateCircle(Kitty_Point position, float radius, bool filled, Kitty_Color color) {
@@ -570,6 +644,31 @@ Kitty_Object* Kitty_CreateMesh(){
     mesh_data->vertex_count = 0;
     mesh_data->face_count = 0;
     mesh_data->wire = false;
+    return obj;
+}
+
+Kitty_Object* Kitty_CreateText(Kitty_Point position, float size, float rotation, Kitty_Color color, const char* text) {
+    Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
+    if (!obj) {
+        return NULL; // Memory allocation failed
+    }
+    obj->type = KITTY_OBJECT_TEXT;
+    obj->data = malloc(sizeof(Kitty_ObjText));
+    if (!obj->data) {
+        free(obj);
+        return NULL; // Memory allocation failed
+    }
+    Kitty_ObjText* text_data = (Kitty_ObjText*)obj->data;
+    text_data->position = position;
+    text_data->size = size;
+    text_data->rotation = rotation;
+    text_data->color = color;
+    text_data->text = strdup(text); // Duplicate the string
+    if (!text_data->text) {
+        free(text_data);
+        free(obj);
+        return NULL; // Memory allocation failed
+    }
     return obj;
 }
 

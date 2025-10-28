@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <string.h>
 #include <stddef.h>
+#include <time.h>
 
 #ifndef KITTYENGINE_H
 #define KITTYENGINE_H
@@ -33,6 +34,7 @@ enum Kitty_ErrorCodes {
     KITTY_SDL_INIT_ERROR = 1000,
     KITTY_SDL_WINDOW_CREATION_ERROR = 1001,
     KITTY_SDL_RENDERER_CREATION_ERROR = 1002,
+    KITTY_SDL_TTF_ERROR = 1003,
 
     KITTY_UNKNOWN_ERROR = 9999
 };
@@ -43,7 +45,8 @@ enum Kitty_ObjType {
     KITTY_OBJECT_LINE,
     KITTY_OBJECT_TRIANGLE,
     KITTY_OBJECT_PIXEL,
-    KITTY_OBJECT_MESH
+    KITTY_OBJECT_MESH,
+    KITTY_OBJECT_TEXT
 };
 
 typedef struct {
@@ -127,6 +130,14 @@ typedef struct {
 } Kitty_ObjMesh;
 
 typedef struct {
+    Kitty_Point position;
+    float size;
+    float rotation;
+    Kitty_Color color;
+    char* text;
+} Kitty_ObjText;
+
+typedef struct {
     enum Kitty_ObjType type;
     void* data;
 
@@ -176,12 +187,20 @@ int Kitty_GetObject(size_t index, Kitty_Object* out_obj);
 int Kitty_AddVertexToObjMesh(Kitty_Object* obj, Kitty_Vertex3D vertex);
 int Kitty_AddFaceToObjMesh(Kitty_Object* obj, Kitty_Face face, Kitty_Color face_color);
 
+size_t Kitty_GetFrameNumber();
+clock_t Kitty_GetDeltaTime();
+double Kitty_GetFrameTime();
+
+void Kitty_SetTimer1();
+bool Kitty_Timer1Trip(long miliseconds);
+
 Kitty_Object* Kitty_CreateCircle(Kitty_Point position, float radius, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreateRectangle(Kitty_Point position, int width, int height, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreateLine(Kitty_Point startPosition, Kitty_Point endPosition, Kitty_Color color);
 Kitty_Object* Kitty_CreateTriangle(Kitty_Point vertex1, Kitty_Point vertex2, Kitty_Point vertex3, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreatePixel(Kitty_Point position, Kitty_Color color);
 Kitty_Object* Kitty_CreateMesh();
+Kitty_Object* Kitty_CreateText(Kitty_Point position, float rotation, float size, Kitty_Color color, const char* text);
 
 
 #endif // KITTYENGINE_H
