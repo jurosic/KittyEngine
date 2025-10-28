@@ -117,6 +117,7 @@ int Kitty_FlipBuffers();
 ///@return Returns 0 on success, or an error code on failure.
 int Kitty_UpdateObjectState();
 int Kitty_RenderObjects();
+int Kitty_ClearObjects();
 
 void Kitty_Clock(int fps);
 

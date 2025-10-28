@@ -1,6 +1,8 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
+
 
 #include "kittyengine.h"
 
@@ -65,24 +67,107 @@ int test_rendering(){
     Kitty_Object* rectangle = Kitty_CreateRectangle(100, 100, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
     Kitty_Object* line = Kitty_CreateLine(50, 50, 300, 300, (Kitty_Color){0, 0, 255, 255});
 
+    if ((result = Kitty_AddObject(*circle))) {
+        printf("Kitty_AddObject (circle) failed with error code: %d\n", result);
+        Kitty_Quit();
+        return 1;
+    }
 
+    if ((result = Kitty_AddObject(*rectangle))) {
+        printf("Kitty_AddObject (rectangle) failed with error code: %d\n", result);
+        Kitty_Quit();
+        return 1;
+    }
+
+    if ((result = Kitty_AddObject(*line))) {
+        printf("Kitty_AddObject (line) failed with error code: %d\n", result);
+        Kitty_Quit();
+        return 1;
+    }
+
+    if ((result = Kitty_RenderObjects())){
+        printf("Kitty_RenderObjects failed with error code: %d\n", result);
+        Kitty_Quit();
+        return 1;
+    }
     if ((result = Kitty_FlipBuffers())){
         printf("Kitty_FlipBuffers failed with error code: %d\n", result);
         Kitty_Quit();
         return 1;
     }
 
-    SDL_Delay(2000);
+    SDL_Delay(1000);
 
-    free(circle->data);
-    free(circle);
-    free(rectangle->data);
-    free(rectangle);
-    free(line->data);
-    free(line);
-
-    Kitty_Quit();
+    if ((result = Kitty_Quit())) {
+        printf("Kitty_Quit failed with error code: %d\n", result);
+        return 1;
+    }
     return 0;
+}
+
+int test_render_multiple() {
+        int result = Kitty_Init("Kitty Engine Rendering Test", 800, 600);
+    if (result != KITTY_SUCCESS){
+        printf("Kitty_Init failed with error code: %d\n", result);
+        return 1;
+    }
+
+    Kitty_Color clearColor = {0, 0, 0, 255};
+
+    for (int i = 0; i < 10; i++){
+        for (int j = 0; j < 5; j++){
+            Kitty_ClearScreen(clearColor);
+
+            //three objects at random places with rand();
+            Kitty_Object* circle = Kitty_CreateCircle(rand() % 800, rand() % 600, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
+            Kitty_Object* rectangle = Kitty_CreateRectangle(rand() % 600, rand() % 450, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
+            Kitty_Object* line = Kitty_CreateLine(rand() % 800, rand() % 600, rand() % 800, rand() % 600, (Kitty_Color){0, 0, 255, 255});
+
+            if ((result = Kitty_AddObject(*circle))) {
+                printf("Kitty_AddObject (circle) failed with error code: %d\n", result);
+                Kitty_Quit();
+                return 1;
+            }
+
+            if ((result = Kitty_AddObject(*rectangle))) {
+                printf("Kitty_AddObject (rectangle) failed with error code: %d\n", result);
+                Kitty_Quit();
+                return 1;
+            }
+
+            if ((result = Kitty_AddObject(*line))) {
+                printf("Kitty_AddObject (line) failed with error code: %d\n", result);
+                Kitty_Quit();
+                return 1;
+            }
+
+            if ((result = Kitty_RenderObjects())){
+                printf("Kitty_RenderObjects failed with error code: %d\n", result);
+                Kitty_Quit();
+                return 1;
+            }
+            if ((result = Kitty_FlipBuffers())){
+                printf("Kitty_FlipBuffers failed with error code: %d\n", result);
+                Kitty_Quit();
+                return 1;
+            }
+
+            Kitty_Clock(5);
+        }
+
+        if ((result = Kitty_ClearObjects())){
+            printf("Kitty_ClearObjects failed with error code: %d\n", result);
+            Kitty_Quit();
+            return 1;
+        }
+    }
+
+    if ((result = Kitty_Quit())) {
+        printf("Kitty_Quit failed with error code: %d\n", result);
+        return 1;
+    }
+    return 0;
+
 }
 
 int test_memory_free(){
@@ -222,6 +307,7 @@ int main(void){
     failed += test_rectangle_creation();
     failed += test_line_creation();
     failed += test_rendering();
+    failed += test_render_multiple();
     failed += test_memory_free();
     failed += test_memory_stress_1000();
     failed += test_memory_stress_100000();

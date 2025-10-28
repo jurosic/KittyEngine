@@ -85,7 +85,7 @@ int Kitty_Quit() {
         return result; // Return error code
     }
 
-    //destroy SDL stuff
+    // Destroy SDL stuff
     if (sdl_renderer) {
         SDL_DestroyRenderer(sdl_renderer);
         sdl_renderer = NULL;
@@ -251,6 +251,18 @@ int Kitty_GetObject(size_t index, Kitty_Object* out_obj) {
     return KITTY_SUCCESS; // Success
 }
 
+int Kitty_ClearObjects() {
+    if (!object_mspace) {
+        return KITTY_MEMORYSPACE_NOT_INITIALIZED; // Memory space not initialized
+    }
+    k_FreeObjectMSpace();
+    size_t result = k_ReallocObjectMSpace();
+    if (result != KITTY_SUCCESS) {
+        return result; // Return error code
+    }
+    return KITTY_SUCCESS; // Success
+}
+
 Kitty_Object* Kitty_CreateCircle(int x, int y, float radius, bool filled, Kitty_Color color) {
     Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
     if (!obj) {
@@ -379,7 +391,7 @@ static int k_FreeObjectMSpace(){
         return KITTY_MEMORYSPACE_NOT_INITIALIZED; // Memory space not initialized
     }
 
-    //loop thru objects and free their data
+    // Loop thru objects and free their data
     for (size_t i = 0; i < object_mspace->allocation_count; i++){
         free(object_mspace->objects[i].data);
         object_mspace->objects[i].data = NULL;
