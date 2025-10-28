@@ -42,13 +42,32 @@ enum Kitty_ObjType {
     KITTY_OBJECT_RECTANGLE,
     KITTY_OBJECT_LINE,
     KITTY_OBJECT_TRIANGLE,
-    KITTY_OBJECT_PIXEL
+    KITTY_OBJECT_PIXEL,
+    KITTY_OBJECT_MESH
 };
 
 typedef struct {
     int x;
     int y;
 } Kitty_Point;
+
+typedef struct {
+    int x;
+    int y;
+    int z;
+} Kitty_Point3D;
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+} Kitty_Vertex3D;
+
+typedef struct {
+    int a;
+    int b;
+    int c;
+} Kitty_Face;
 
 typedef struct {
     Uint8 r;
@@ -97,6 +116,17 @@ typedef struct {
 } Kitty_ObjPixel;
 
 typedef struct {
+    Kitty_Point3D position;
+    float scale;
+    bool wire;
+    Kitty_Vertex3D* vertices;
+    Kitty_Face* faces;
+    Kitty_Color* face_colors;
+    size_t vertex_count;
+    size_t face_count;
+} Kitty_ObjMesh;
+
+typedef struct {
     enum Kitty_ObjType type;
     void* data;
 
@@ -143,10 +173,15 @@ int Kitty_RemoveObject(size_t index);
 
 int Kitty_GetObject(size_t index, Kitty_Object* out_obj);
 
+int Kitty_AddVertexToObjMesh(Kitty_Object* obj, Kitty_Vertex3D vertex);
+int Kitty_AddFaceToObjMesh(Kitty_Object* obj, Kitty_Face face, Kitty_Color face_color);
+
 Kitty_Object* Kitty_CreateCircle(Kitty_Point position, float radius, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreateRectangle(Kitty_Point position, int width, int height, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreateLine(Kitty_Point startPosition, Kitty_Point endPosition, Kitty_Color color);
 Kitty_Object* Kitty_CreateTriangle(Kitty_Point vertex1, Kitty_Point vertex2, Kitty_Point vertex3, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreatePixel(Kitty_Point position, Kitty_Color color);
+Kitty_Object* Kitty_CreateMesh();
+
 
 #endif // KITTYENGINE_H
