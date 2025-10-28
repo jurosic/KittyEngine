@@ -140,7 +140,7 @@ int Kitty_RenderObjects() {
                             int dx = c_obj->radius - w; // horizontal offset
                             int dy = c_obj->radius - h; // vertical offset
                             if ((dx*dx + dy*dy) <= (c_obj->radius * c_obj->radius)) {
-                                SDL_RenderDrawPoint(sdl_renderer, c_obj->x + dx, c_obj->y + dy);
+                                SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x + dx, c_obj->position.y + dy);
                             }
                         }
                     }
@@ -152,14 +152,14 @@ int Kitty_RenderObjects() {
                     int dy = 1;
                     int err = dx - ((int)c_obj->radius << 1);
                     while (x >= y) {
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x + x, c_obj->y + y);
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x + y, c_obj->y + x);
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x - y, c_obj->y + x);
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x - x, c_obj->y + y);
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x - x, c_obj->y - y);
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x - y, c_obj->y - x);
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x + y, c_obj->y - x);
-                        SDL_RenderDrawPoint(sdl_renderer, c_obj->x + x, c_obj->y - y);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x + x, c_obj->position.y + y);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x + y, c_obj->position.y + x);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x - y, c_obj->position.y + x);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x - x, c_obj->position.y + y);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x - x, c_obj->position.y - y);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x - y, c_obj->position.y - x);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x + y, c_obj->position.y - x);
+                        SDL_RenderDrawPoint(sdl_renderer, c_obj->position.x + x, c_obj->position.y - y);
 
                         if (err <= 0) {
                             y++;
@@ -180,7 +180,7 @@ int Kitty_RenderObjects() {
                 // Render rectangle
                 Kitty_ObjRectangle* r_obj = (typeof(Kitty_ObjRectangle)*)obj.data;
                 Kitty_Color rect_col = r_obj->color;
-                SDL_Rect rect = {r_obj->x, r_obj->y, r_obj->width, r_obj->height};
+                SDL_Rect rect = {r_obj->position.x, r_obj->position.y, r_obj->width, r_obj->height};
                 SDL_SetRenderDrawColor(sdl_renderer, rect_col.r, rect_col.g, rect_col.b, rect_col.a);
                 if (r_obj->filled) {
                     SDL_RenderFillRect(sdl_renderer, &rect);
@@ -194,9 +194,46 @@ int Kitty_RenderObjects() {
                 Kitty_ObjLine* l_obj = (typeof(Kitty_ObjLine)*)obj.data;
                 Kitty_Color line_col = l_obj->color;
                 SDL_SetRenderDrawColor(sdl_renderer, line_col.r, line_col.g, line_col.b, line_col.a);
-                SDL_RenderDrawLine(sdl_renderer, l_obj->x1, l_obj->y1, l_obj->x2, l_obj->y2);
+                SDL_RenderDrawLine(sdl_renderer, l_obj->startPoint.x, l_obj->startPoint.y, l_obj->endPoint.x, l_obj->endPoint.y);
 
                 break;
+
+            case KITTY_OBJECT_TRIANGLE:
+                // Render triangle
+                Kitty_ObjTriangle* t_obj = (typeof(Kitty_ObjTriangle)*)obj.data;
+                Kitty_Color tri_col = t_obj->color;
+                SDL_SetRenderDrawColor(sdl_renderer, tri_col.r, tri_col.g, tri_col.b, tri_col.a);
+                SDL_RenderDrawLine(sdl_renderer, t_obj->vertex1.x, t_obj->vertex1.y, t_obj->vertex2.x, t_obj->vertex2.y);
+                SDL_RenderDrawLine(sdl_renderer, t_obj->vertex2.x, t_obj->vertex2.y, t_obj->vertex3.x, t_obj->vertex3.y);
+                SDL_RenderDrawLine(sdl_renderer, t_obj->vertex3.x, t_obj->vertex3.y, t_obj->vertex1.x, t_obj->vertex1.y);
+
+                if (t_obj->filled){
+                    // Simple filled triangle rendering (not optimized)
+                    int minX = fmin(fmin(t_obj->vertex1.x, t_obj->vertex2.x), t_obj->vertex3.x);
+                    int maxX = fmax(fmax(t_obj->vertex1.x, t_obj->vertex2.x), t_obj->vertex3.x);
+                    int minY = fmin(fmin(t_obj->vertex1.y, t_obj->vertex2.y), t_obj->vertex3.y);
+                    int maxY = fmax(fmax(t_obj->vertex1.y, t_obj->vertex2.y), t_obj->vertex3.y);
+
+                    for (int y = minY; y <= maxY; y++) {
+                        for (int x = minX; x <= maxX; x++) {
+                            // Barycentric technique or edge function can be used here for better performance
+                            // Placeholder for filled triangle logic
+                            SDL_RenderDrawPoint(sdl_renderer, x, y);
+                        }
+                    }
+                }
+
+                break;
+
+            case KITTY_OBJECT_PIXEL:
+                // Render pixel
+                Kitty_ObjPixel* p_obj = (typeof(Kitty_ObjPixel)*)obj.data;
+                Kitty_Color pixel_col = p_obj->color;
+                SDL_SetRenderDrawColor(sdl_renderer, pixel_col.r, pixel_col.g, pixel_col.b, pixel_col.a);
+                SDL_RenderDrawPoint(sdl_renderer, p_obj->position.x, p_obj->position.y);
+
+                break;
+
             default:
                 return KITTY_UNKNOWN_ERROR; // Unknown object type
         }
@@ -263,7 +300,7 @@ int Kitty_ClearObjects() {
     return KITTY_SUCCESS; // Success
 }
 
-Kitty_Object* Kitty_CreateCircle(int x, int y, float radius, bool filled, Kitty_Color color) {
+Kitty_Object* Kitty_CreateCircle(Kitty_Point position, float radius, bool filled, Kitty_Color color) {
     Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
     if (!obj) {
         return NULL; // Memory allocation failed
@@ -275,15 +312,14 @@ Kitty_Object* Kitty_CreateCircle(int x, int y, float radius, bool filled, Kitty_
         return NULL; // Memory allocation failed
     }
     Kitty_ObjCircle* circle_data = (Kitty_ObjCircle*)obj->data;
-    circle_data->x = x;
-    circle_data->y = y;
+    circle_data->position = position;
     circle_data->radius = radius;
     circle_data->filled = filled;
     circle_data->color = color;
     return obj;
 }
 
-Kitty_Object* Kitty_CreateRectangle(int x, int y, int width, int height, bool filled, Kitty_Color color) {
+Kitty_Object* Kitty_CreateRectangle(Kitty_Point position, int width, int height, bool filled, Kitty_Color color) {
     Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
     if (!obj) {
         return NULL; // Memory allocation failed
@@ -295,8 +331,7 @@ Kitty_Object* Kitty_CreateRectangle(int x, int y, int width, int height, bool fi
         return NULL; // Memory allocation failed
     }
     Kitty_ObjRectangle* rect_data = (Kitty_ObjRectangle*)obj->data;
-    rect_data->x = x;
-    rect_data->y = y;
+    rect_data->position = position;
     rect_data->width = width;
     rect_data->height = height;
     rect_data->filled = filled;
@@ -304,7 +339,7 @@ Kitty_Object* Kitty_CreateRectangle(int x, int y, int width, int height, bool fi
     return obj;
 }
 
-Kitty_Object* Kitty_CreateLine(int x1, int y1, int x2, int y2, Kitty_Color color) {
+Kitty_Object* Kitty_CreateLine(Kitty_Point startPosition, Kitty_Point endPosition, Kitty_Color color) {
     Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
     if (!obj) {
         return NULL; // Memory allocation failed
@@ -316,21 +351,48 @@ Kitty_Object* Kitty_CreateLine(int x1, int y1, int x2, int y2, Kitty_Color color
         return NULL; // Memory allocation failed
     }
     Kitty_ObjLine* line_data = (Kitty_ObjLine*)obj->data;
-    line_data->x1 = x1;
-    line_data->y1 = y1;
-    line_data->x2 = x2;
-    line_data->y2 = y2;
+    line_data->startPoint = startPosition;
+    line_data->endPoint = endPosition;
     line_data->color = color;
     return obj;
 }
 
+Kitty_Object* Kitty_CreateTriangle(Kitty_Point vertex1, Kitty_Point vertex2, Kitty_Point vertex3, bool filled, Kitty_Color color) {
+    Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
+    if (!obj) {
+        return NULL; // Memory allocation failed
+    }
+    obj->type = KITTY_OBJECT_TRIANGLE;
+    obj->data = malloc(sizeof(Kitty_ObjTriangle));
+    if (!obj->data) {
+        free(obj);
+        return NULL; // Memory allocation failed
+    }
+    Kitty_ObjTriangle* tri_data = (Kitty_ObjTriangle*)obj->data;
+    tri_data->vertex1 = vertex1;
+    tri_data->vertex2 = vertex2;
+    tri_data->vertex3 = vertex3;
+    tri_data->color = color;
+    tri_data->filled = filled;
+    return obj;
+}
 
-
-
-
-
-
-
+Kitty_Object* Kitty_CreatePixel(Kitty_Point position, Kitty_Color color) {
+    Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
+    if (!obj) {
+        return NULL; // Memory allocation failed
+    }
+    obj->type = KITTY_OBJECT_PIXEL;
+    obj->data = malloc(sizeof(Kitty_ObjPixel));
+    if (!obj->data) {
+        free(obj);
+        return NULL; // Memory allocation failed
+    }
+    Kitty_ObjPixel* pixel_data = (Kitty_ObjPixel*)obj->data;
+    pixel_data->position = position;
+    pixel_data->color = color;
+    return obj;
+}
 
 // MEMORY STUFF
 

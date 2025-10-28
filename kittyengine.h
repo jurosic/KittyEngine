@@ -40,8 +40,15 @@ enum Kitty_ErrorCodes {
 enum Kitty_ObjType {
     KITTY_OBJECT_CIRCLE,
     KITTY_OBJECT_RECTANGLE,
-    KITTY_OBJECT_LINE
+    KITTY_OBJECT_LINE,
+    KITTY_OBJECT_TRIANGLE,
+    KITTY_OBJECT_PIXEL
 };
+
+typedef struct {
+    int x;
+    int y;
+} Kitty_Point;
 
 typedef struct {
     Uint8 r;
@@ -56,16 +63,14 @@ typedef struct {
 } Kitty_ColorGradient;
 
 typedef struct {
-    int x;
-    int y;
+    Kitty_Point position;
     float radius;
     bool filled;
     Kitty_Color color;
 } Kitty_ObjCircle;
 
 typedef struct {
-    int x;
-    int y;
+    Kitty_Point position;
     int width;
     int height;
     bool filled;
@@ -73,12 +78,23 @@ typedef struct {
 } Kitty_ObjRectangle;
 
 typedef struct {
-    int x1;
-    int y1;
-    int x2;
-    int y2;
+    Kitty_Point startPoint;
+    Kitty_Point endPoint;
     Kitty_Color color;
 } Kitty_ObjLine;
+
+typedef struct {
+    Kitty_Point vertex1;
+    Kitty_Point vertex2;
+    Kitty_Point vertex3;
+    Kitty_Color color;
+    bool filled;
+} Kitty_ObjTriangle;
+
+typedef struct {
+    Kitty_Point position;
+    Kitty_Color color;
+} Kitty_ObjPixel;
 
 typedef struct {
     enum Kitty_ObjType type;
@@ -127,8 +143,10 @@ int Kitty_RemoveObject(size_t index);
 
 int Kitty_GetObject(size_t index, Kitty_Object* out_obj);
 
-Kitty_Object* Kitty_CreateCircle(int x, int y, float radius, bool filled, Kitty_Color color);
-Kitty_Object* Kitty_CreateRectangle(int x, int y, int width, int height, bool filled, Kitty_Color color);
-Kitty_Object* Kitty_CreateLine(int x1, int y1, int x2, int y2, Kitty_Color color);
+Kitty_Object* Kitty_CreateCircle(Kitty_Point position, float radius, bool filled, Kitty_Color color);
+Kitty_Object* Kitty_CreateRectangle(Kitty_Point position, int width, int height, bool filled, Kitty_Color color);
+Kitty_Object* Kitty_CreateLine(Kitty_Point startPosition, Kitty_Point endPosition, Kitty_Color color);
+Kitty_Object* Kitty_CreateTriangle(Kitty_Point vertex1, Kitty_Point vertex2, Kitty_Point vertex3, bool filled, Kitty_Color color);
+Kitty_Object* Kitty_CreatePixel(Kitty_Point position, Kitty_Color color);
 
 #endif // KITTYENGINE_H

@@ -18,7 +18,7 @@ int test_init(){
 }
 
 int test_circle_creation(){
-    Kitty_Object* circle = Kitty_CreateCircle(400, 300, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
+    Kitty_Object* circle = Kitty_CreateCircle((Kitty_Point){300, 400}, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
     if (!circle){
         printf("Kitty_CreateCircle failed.\n");
         return 1;
@@ -30,7 +30,7 @@ int test_circle_creation(){
 }
 
 int test_rectangle_creation(){
-    Kitty_Object* rectangle = Kitty_CreateRectangle(100, 100, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
+    Kitty_Object* rectangle = Kitty_CreateRectangle((Kitty_Point){100, 100}, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
     if (!rectangle){
         printf("Kitty_CreateRectangle failed.\n");
         return 1;
@@ -42,7 +42,7 @@ int test_rectangle_creation(){
 }
 
 int test_line_creation(){
-    Kitty_Object* line = Kitty_CreateLine(50, 50, 300, 300, (Kitty_Color){0, 0, 255, 255});
+    Kitty_Object* line = Kitty_CreateLine((Kitty_Point){50, 50}, (Kitty_Point){300, 300}, (Kitty_Color){0, 0, 255, 255});
     if (!line){
         printf("Kitty_CreateLine failed.\n");
         return 1;
@@ -63,9 +63,9 @@ int test_rendering(){
     Kitty_Color clearColor = {0, 0, 0, 255};
     Kitty_ClearScreen(clearColor);
 
-    Kitty_Object* circle = Kitty_CreateCircle(400, 300, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
-    Kitty_Object* rectangle = Kitty_CreateRectangle(100, 100, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
-    Kitty_Object* line = Kitty_CreateLine(50, 50, 300, 300, (Kitty_Color){0, 0, 255, 255});
+    Kitty_Object* circle = Kitty_CreateCircle((Kitty_Point){400, 300}, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
+    Kitty_Object* rectangle = Kitty_CreateRectangle((Kitty_Point){100, 100}, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
+    Kitty_Object* line = Kitty_CreateLine((Kitty_Point){50, 50}, (Kitty_Point){300, 300}, (Kitty_Color){0, 0, 255, 255});
 
     if ((result = Kitty_AddObject(*circle))) {
         printf("Kitty_AddObject (circle) failed with error code: %d\n", result);
@@ -119,9 +119,9 @@ int test_render_multiple() {
             Kitty_ClearScreen(clearColor);
 
             //three objects at random places with rand();
-            Kitty_Object* circle = Kitty_CreateCircle(rand() % 800, rand() % 600, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
-            Kitty_Object* rectangle = Kitty_CreateRectangle(rand() % 600, rand() % 450, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
-            Kitty_Object* line = Kitty_CreateLine(rand() % 800, rand() % 600, rand() % 800, rand() % 600, (Kitty_Color){0, 0, 255, 255});
+            Kitty_Object* circle = Kitty_CreateCircle((Kitty_Point){rand() % 800, rand() % 600}, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
+            Kitty_Object* rectangle = Kitty_CreateRectangle((Kitty_Point){rand() % 600, rand() % 450}, 200, 150, false, (Kitty_Color){0, 255, 0, 255});
+            Kitty_Object* line = Kitty_CreateLine((Kitty_Point){rand() % 800, rand() % 600}, (Kitty_Point){rand() % 800, rand() % 600}, (Kitty_Color){0, 0, 255, 255});
 
             if ((result = Kitty_AddObject(*circle))) {
                 printf("Kitty_AddObject (circle) failed with error code: %d\n", result);
@@ -178,7 +178,7 @@ int test_memory_free(){
     }
 
     for (int i = 0; i < 100; i++){
-        Kitty_Object* circle = Kitty_CreateCircle(400, 300, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
+        Kitty_Object* circle = Kitty_CreateCircle((Kitty_Point){400, 300}, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
         if (!circle){
             printf("Kitty_CreateCircle failed during memory test.\n");
             Kitty_Quit();
@@ -221,7 +221,7 @@ int test_memory_stress_1000(){
     }
 
     for (int i = 0; i < 1000; i++){
-        Kitty_Object* circle = Kitty_CreateCircle(400, 300, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
+        Kitty_Object* circle = Kitty_CreateCircle((Kitty_Point){400, 300}, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
         if (!circle){
             printf("Kitty_CreateCircle failed during memory stress test.\n");
             Kitty_Quit();
@@ -264,7 +264,7 @@ int test_memory_stress_100000(){
     }
 
     for (int i = 0; i < 100000; i++){
-        Kitty_Object* circle = Kitty_CreateCircle(400, 300, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
+        Kitty_Object* circle = Kitty_CreateCircle((Kitty_Point){400, 300}, 50.0f, true, (Kitty_Color){255, 0, 0, 255});
         if (!circle){
             printf("Kitty_CreateCircle failed during memory stress test.\n");
             Kitty_Quit();
