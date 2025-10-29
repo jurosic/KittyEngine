@@ -12,7 +12,7 @@ $(LIB_OBJ): ${LIB_SRC}
 	$(CC) $(CC_FLAGS) -c $< -o $@ -lm -lSDL2
 
 test: $(LIB_OBJ) $(TEST_SRC)
-	$(CC) $(CC_FLAGS) -o $(TEST_BIN) $(TEST_SRC) $(LIB_OBJ) -lm -lSDL2 -lSDL2_ttf
+	$(CC) $(CC_FLAGS) -o $(TEST_BIN) $(TEST_SRC) $(LIB_OBJ) -lm -lSDL2 -lSDL2_ttf -lSDL2_image
 	./$(TEST_BIN)
 
 # Clean up build files

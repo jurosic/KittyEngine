@@ -1,4 +1,6 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 #include <string.h>
 #include <stddef.h>
 #include <time.h>
@@ -25,6 +27,7 @@ enum Kitty_ErrorCodes {
     KITTY_INIT_FAILURE = 1,
     KITTY_SDL_WINDOW_NOT_INITIALIZED = 2,
     KITTY_SDL_RENDERER_NOT_INITIALIZED = 3,
+    KITTY_SDL_LOCK_TEXTURE_ERROR = 4,
 
     KITTY_MEMORY_ALLOCATION_FAILURE = 100,
     KITTY_MEMORYSPACE_NOT_INITIALIZED = 101,
@@ -66,10 +69,18 @@ typedef struct {
     float z;
 } Kitty_Vertex3D;
 
+typedef struct{
+    float u;
+    float v;
+} Kitty_UV;
+
 typedef struct {
     int a;
     int b;
     int c;
+    int uv_a;
+    int uv_b;
+    int uv_c;
 } Kitty_Face;
 
 typedef struct {
@@ -83,6 +94,10 @@ typedef struct {
     Kitty_Color startColor;
     Kitty_Color endColor;
 } Kitty_ColorGradient;
+
+typedef struct {
+    SDL_Surface* sdl_surface;
+} Kitty_Texture;
 
 typedef struct {
     Kitty_Point position;
@@ -121,10 +136,14 @@ typedef struct {
 typedef struct {
     Kitty_Point3D position;
     float scale;
+    bool wrap;
     bool wire;
     Kitty_Vertex3D* vertices;
     Kitty_Face* faces;
     Kitty_Color* face_colors;
+    Kitty_UV* uvs;
+    Kitty_Texture* texture;
+    size_t uv_count;
     size_t vertex_count;
     size_t face_count;
 } Kitty_ObjMesh;
@@ -186,6 +205,9 @@ int Kitty_GetObject(size_t index, Kitty_Object* out_obj);
 
 int Kitty_AddVertexToObjMesh(Kitty_Object* obj, Kitty_Vertex3D vertex);
 int Kitty_AddFaceToObjMesh(Kitty_Object* obj, Kitty_Face face, Kitty_Color face_color);
+int Kitty_AddUVToObjMesh(Kitty_Object* obj, Kitty_UV uv);
+
+Kitty_Texture* Kitty_LoadTexture(const char* file_path);
 
 size_t Kitty_GetFrameNumber();
 clock_t Kitty_GetDeltaTime();

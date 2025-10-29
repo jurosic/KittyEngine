@@ -1,7 +1,10 @@
 #include <stddef.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
 #include <sys/time.h>
+#include <math.h>
+
 
 #include "kittyengine.h"
 
@@ -331,6 +334,9 @@ int Kitty_RenderObjects() {
                     Kitty_Vertex3D v1 = m_obj->vertices[face.a];
                     Kitty_Vertex3D v2 = m_obj->vertices[face.b];
                     Kitty_Vertex3D v3 = m_obj->vertices[face.c];
+                    Kitty_UV uv1 = m_obj->uvs[face.uv_a];
+                    Kitty_UV uv2 = m_obj->uvs[face.uv_b];
+                    Kitty_UV uv3 = m_obj->uvs[face.uv_c];
 
                     //ugly but we gotta copy to modify
                     float v1x = v1.x;
@@ -346,15 +352,43 @@ int Kitty_RenderObjects() {
                     float v3z = v3.z;
 
 
-                    //apply perspective
-                    float distance = 5.0f; // Distance from the viewer to the projection plane
-                    v1x = v1x * (distance / (distance + v1z));
-                    v1y = v1y * (distance / (distance + v1z));
-                    v2x = v2x * (distance / (distance + v2z));
-                    v2y = v2y * (distance / (distance + v2z));
-                    v3x = v3x * (distance / (distance + v3z));
-                    v3y = v3y * (distance / (distance + v3z));
+                    float uv1u = uv1.u;
+                    float uv1v = uv1.v;
 
+                    float uv2u = uv2.u;
+                    float uv2v = uv2.v;
+
+                    float uv3u = uv3.u;
+                    float uv3v = uv3.v;
+
+                    /*float uv1u = 0;
+                    float uv1v = 0;
+
+                    float uv2u = 0;
+                    float uv2v = 0;
+
+                    float uv3u = 0;
+                    float uv3v = 0;*/
+
+                    //apply perspective
+                    float distance = 100.0f; // Distance from the viewer to the projection plane
+                    float persp_1 = distance / (distance + v1z - position.z);
+                    float persp_2 = distance / (distance + v2z - position.z);
+                    float persp_3 = distance / (distance + v3z - position.z);
+
+                    v1x = v1x * persp_1;
+                    v1y = v1y * persp_1;
+                    v2x = v2x * persp_2;
+                    v2y = v2y * persp_2;
+                    v3x = v3x * persp_3;
+                    v3y = v3y * persp_3;
+
+                    uv1u = uv1u * persp_1;
+                    uv1v = uv1v * persp_1;
+                    uv2u = uv2u * persp_2;
+                    uv2v = uv2v * persp_2;
+                    uv3u = uv3u * persp_3;
+                    uv3v = uv3v * persp_3;
 
                     SDL_SetRenderDrawColor(sdl_renderer, face_col.r, face_col.g, face_col.b, face_col.a);
 
@@ -363,8 +397,21 @@ int Kitty_RenderObjects() {
                                        position.y + (v1y * scale),
                                        position.x + (v2x * scale),
                                        position.y + (v2y * scale));
+                        
+                    SDL_RenderDrawLine(sdl_renderer,
+                                       position.x + (v2x * scale),
+                                       position.y + (v2y * scale),
+                                       position.x + (v3x * scale),
+                                       position.y + (v3y * scale));
 
-                    if (!m_obj->wire){
+                    SDL_RenderDrawLine(sdl_renderer,
+                                       position.x + (v3x * scale),
+                                       position.y + (v3y * scale),
+                                       position.x + (v1x * scale),
+                                       position.y + (v1y * scale));
+
+
+                    if (!m_obj->wire && !m_obj->wrap){
                         //simple scanline fill
                         int minY = (position.y + (v1y * scale)) < (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
                         int maxY = (position.y + (v1y * scale)) > (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
@@ -393,11 +440,97 @@ int Kitty_RenderObjects() {
                                 SDL_RenderDrawLine(sdl_renderer, nodeX[i], y, nodeX[i + 1], y);
                             }
                         }
+                    } 
+                    else if (m_obj->wrap) {
+                        int minY = (position.y + (v1y * scale)) < (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
+                        int maxY = (position.y + (v1y * scale)) > (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
 
+                        // screen-space vertices
+                        Kitty_Point3D* vertices[3] = {
+                            &(Kitty_Point3D){position.x + (v1x * scale), position.y + (v1y * scale), position.z + (v1.z * scale)},
+                            &(Kitty_Point3D){position.x + (v2x * scale), position.y + (v2y * scale), position.z + (v2.z * scale)},
+                            &(Kitty_Point3D){position.x + (v3x * scale), position.y + (v3y * scale), position.z + (v3.z * scale)}
+                        };
 
+                        // perspective-correct setup:
+                        // uv1u/v, uv2u/v, uv3u/v were pre-multiplied by persp_1/2/3 earlier
+                        float U_p[3] = { uv1u, uv2u, uv3u }; // u' = u * persp
+                        float V_p[3] = { uv1v, uv2v, uv3v }; // v' = v * persp
+                        float W_p[3] = { persp_1, persp_2, persp_3 }; // w' = persp
+
+                        for (int y = minY; y <= maxY; y++){
+                            int nodes = 0;
+                            int   nodeX[3];
+                            float nodeU_p[3], nodeV_p[3], nodeW_p[3];
+
+                            // find edge intersections and interpolate u', v', w' at the intersections
+                            for (int i = 0; i < 3; i++){
+                                int j = (i + 1) % 3;
+                                Kitty_Point3D* v1p = vertices[i];
+                                Kitty_Point3D* v2p = vertices[j];
+                                if ((v1p->y < y && v2p->y >= y) || (v2p->y < y && v1p->y >= y)){
+                                    float dy = (float)v2p->y - (float)v1p->y;
+                                    if (fabsf(dy) < 1e-6f) continue; // avoid div by zero
+                                    float t = ((float)y - (float)v1p->y) / dy;
+
+                                    nodeX[nodes]   = (int)( (float)v1p->x + t * ((float)v2p->x - (float)v1p->x) );
+                                    nodeU_p[nodes] = U_p[i] + t * (U_p[j] - U_p[i]);
+                                    nodeV_p[nodes] = V_p[i] + t * (V_p[j] - V_p[i]);
+                                    nodeW_p[nodes] = W_p[i] + t * (W_p[j] - W_p[i]);
+                                    nodes++;
+                                }
+                            }
+
+                            if (nodes < 2) continue;
+
+                            // ensure left->right ordering; swap accompanying attributes
+                            if (nodeX[0] > nodeX[1]){
+                                int   tx = nodeX[0];    nodeX[0] = nodeX[1];    nodeX[1] = tx;
+                                float tu = nodeU_p[0];  nodeU_p[0] = nodeU_p[1]; nodeU_p[1] = tu;
+                                float tv = nodeV_p[0];  nodeV_p[0] = nodeV_p[1]; nodeV_p[1] = tv;
+                                float tw = nodeW_p[0];  nodeW_p[0] = nodeW_p[1]; nodeW_p[1] = tw;
+                            }
+
+                            int x0 = nodeX[0];
+                            int x1 = nodeX[1];
+                            if (x1 == x0) continue;
+
+                            for (int x = x0; x <= x1; x++){
+                                float tx = (float)(x - x0) / (float)(x1 - x0);
+                                // interpolate u', v', w' across the scanline
+                                float u_p = nodeU_p[0] + tx * (nodeU_p[1] - nodeU_p[0]);
+                                float v_p = nodeV_p[0] + tx * (nodeV_p[1] - nodeV_p[0]);
+                                float w_p = nodeW_p[0] + tx * (nodeW_p[1] - nodeW_p[0]);
+
+                                if (fabsf(w_p) < 1e-8f) continue; // avoid div by zero
+
+                                // recover perspective-correct u, v
+                                float u = u_p / w_p;
+                                float v = v_p / w_p;
+
+                                // wrap to [0,1)
+                                u = fmodf(u, 1.0f); if (u < 0) u += 1.0f;
+                                v = fmodf(v, 1.0f); if (v < 0) v += 1.0f;
+
+                                int tex_width  = m_obj->texture->sdl_surface->w;
+                                int tex_height = m_obj->texture->sdl_surface->h;
+                                int tex_pitch  = m_obj->texture->sdl_surface->pitch;
+
+                                int tex_x = (int)(u * tex_width);
+                                int tex_y = (int)(v * tex_height);
+                                if ((unsigned)tex_x >= (unsigned)tex_width || (unsigned)tex_y >= (unsigned)tex_height) continue;
+
+                                Uint32* pixels = (Uint32*)m_obj->texture->sdl_surface->pixels;
+                                Uint32 color = pixels[tex_y * (tex_pitch / 4) + tex_x];
+
+                                Uint8 r, g, b, a;
+                                SDL_GetRGBA(color, m_obj->texture->sdl_surface->format, &r, &g, &b, &a);
+                                SDL_SetRenderDrawColor(sdl_renderer, r, g, b, 255);
+                                SDL_RenderDrawPoint(sdl_renderer, x, y);
+                            }
+                        }
                     }
                 }
-
 
                 break;
 
@@ -506,6 +639,37 @@ int Kitty_AddFaceToObjMesh(Kitty_Object* obj, Kitty_Face face, Kitty_Color face_
     mesh->face_colors[mesh->face_count] = face_color;
     mesh->face_count++;
     return KITTY_SUCCESS; // Success
+}
+
+int Kitty_AddUVToObjMesh(Kitty_Object* obj, Kitty_UV uv) {
+    if (!obj || obj->type != KITTY_OBJECT_MESH) {
+        return KITTY_INVALID_OBJECT_INDEX; // Invalid object or not a mesh
+    }
+    Kitty_ObjMesh* mesh = (Kitty_ObjMesh*)obj->data;
+    size_t new_size = (mesh->uv_count + 1) * sizeof(Kitty_UV);
+    Kitty_UV* new_uvs = (Kitty_UV*)realloc(mesh->uvs, new_size);
+    if (!new_uvs) {
+        return KITTY_MEMORY_ALLOCATION_FAILURE; // Memory allocation failed
+    }
+    mesh->uvs = new_uvs;
+    mesh->uvs[mesh->uv_count] = uv;
+    mesh->uv_count++;
+    return KITTY_SUCCESS; // Success
+}
+
+Kitty_Texture* Kitty_LoadTexture(const char* file_path) {
+    if (!sdl_renderer) {
+        return NULL; // SDL renderer not initialized
+    }
+    SDL_Surface* surface = IMG_Load(file_path);
+    SDL_Surface* optimized_surface = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+    if (!surface) {
+
+        return NULL; // Image loading failed
+    }
+    Kitty_Texture* texture = (Kitty_Texture*)malloc(sizeof(Kitty_Texture));
+    texture->sdl_surface = optimized_surface;
+    return texture;
 }
 
 size_t Kitty_GetFrameNumber() {
@@ -639,11 +803,14 @@ Kitty_Object* Kitty_CreateMesh(){
     mesh_data->vertices = NULL;
     mesh_data->faces = NULL;
     mesh_data->face_colors = NULL;
+    mesh_data->uvs = NULL;
     mesh_data->scale = 1;
     mesh_data->position = (Kitty_Point3D){0, 0, 0};
     mesh_data->vertex_count = 0;
     mesh_data->face_count = 0;
+    mesh_data->uv_count = 0;
     mesh_data->wire = false;
+    mesh_data->wrap = true;
     return obj;
 }
 
