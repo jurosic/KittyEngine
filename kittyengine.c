@@ -508,9 +508,12 @@ int Kitty_RenderObjects() {
                                 float u = u_p / w_p;
                                 float v = v_p / w_p;
 
-                                // wrap to [0,1)
-                                u = fmodf(u, 1.0f); if (u < 0) u += 1.0f;
-                                v = fmodf(v, 1.0f); if (v < 0) v += 1.0f;
+                                //if v, u < 0 or > 1 wrap to other side
+                                if (u < 0) u = 1.0f + fmodf(u, 1.0f);
+                                if (v < 0) v = 1.0f + fmodf(v, 1.0f);
+                                u = fmodf(u, 1.0f);
+                                v = fmodf(v, 1.0f);
+
 
                                 int tex_width  = m_obj->texture->sdl_surface->w;
                                 int tex_height = m_obj->texture->sdl_surface->h;
@@ -670,6 +673,54 @@ Kitty_Texture* Kitty_LoadTexture(const char* file_path) {
     Kitty_Texture* texture = (Kitty_Texture*)malloc(sizeof(Kitty_Texture));
     texture->sdl_surface = optimized_surface;
     return texture;
+}
+
+int Kitty_LoadDotObj(FILE* file, Kitty_Object* mesh) {
+    char line[128];
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "v ", 2) == 0) {
+            Kitty_Vertex3D vertex;
+            sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
+
+
+            Kitty_AddVertexToObjMesh(mesh, vertex);
+        } else if (strncmp(line, "f ", 2) == 0) {
+            Kitty_Face face;
+
+            //random color for each face
+            Kitty_Color color = {
+                .r = rand() % 256,
+                .g = rand() % 256,
+                .b = rand() % 256,
+                .a = 255
+            };
+
+            int a, b, c;
+            int uv_a, uv_b, uv_c;
+
+            //f 6/18/13 10/19/13 20/20/13
+            sscanf(line, "f %d/%d/%*d %d/%d/%*d %d/%d/%*d", &a, &uv_a, &b, &uv_b, &c, &uv_c);
+
+
+            face.a = a - 1;
+            face.b = b - 1;
+            face.c = c - 1;
+            face.uv_a = uv_a - 1;
+            face.uv_b = uv_b - 1;
+            face.uv_c = uv_c - 1;
+
+            Kitty_AddFaceToObjMesh(mesh, face, color);
+        } else if (strncmp(line, "vt ", 2) == 0) {
+            Kitty_UV uv;
+            sscanf(line, "vt %f %f", &uv.u, &uv.v);
+
+            //flip UV
+            uv.v = 1.0f - uv.v;
+
+            Kitty_AddUVToObjMesh(mesh, uv);
+        }
+    }
+    return 0;
 }
 
 size_t Kitty_GetFrameNumber() {
@@ -837,6 +888,59 @@ Kitty_Object* Kitty_CreateText(Kitty_Point position, float size, float rotation,
         return NULL; // Memory allocation failed
     }
     return obj;
+}
+
+int KittyD_DrawMeshUVMap(Kitty_Point position, int scale, Kitty_ObjMesh* mesh){
+    if (!sdl_renderer){
+        return KITTY_SDL_RENDERER_NOT_INITIALIZED; // SDL renderer not initialized
+    }
+
+    // create wireframe of mesh, each vertex offset by position
+    for (size_t f = 0; f < mesh->face_count; f++){
+        Kitty_Face face = mesh->faces[f];
+        Kitty_UV uv1 = mesh->uvs[face.uv_a];
+        Kitty_UV uv2 = mesh->uvs[face.uv_b];
+        Kitty_UV uv3 = mesh->uvs[face.uv_c];
+
+        int uv1x = position.x + (int)(uv1.u * mesh->texture->sdl_surface->w) * scale;
+        int uv1y = position.y + (int)(uv1.v * mesh->texture->sdl_surface->h) * scale;
+        int uv2x = position.x + (int)(uv2.u * mesh->texture->sdl_surface->w) * scale;
+        int uv2y = position.y + (int)(uv2.v * mesh->texture->sdl_surface->h) * scale;
+        int uv3x = position.x + (int)(uv3.u * mesh->texture->sdl_surface->w) * scale;
+        int uv3y = position.y + (int)(uv3.v * mesh->texture->sdl_surface->h) * scale;
+
+        //set red color
+        SDL_SetRenderDrawColor(sdl_renderer, 255, 0, 0, 255);
+        SDL_RenderDrawLine(sdl_renderer, uv1x, uv1y, uv2x, uv2y);
+        SDL_RenderDrawLine(sdl_renderer, uv2x, uv2y, uv3x, uv3y);
+        SDL_RenderDrawLine(sdl_renderer, uv3x, uv3y, uv1x, uv1y);
+    }
+
+    return KITTY_SUCCESS;
+}
+
+int KittyD_DrawTexture(Kitty_Point position, int scale, Kitty_Texture* texture){
+    if (!sdl_renderer){
+        return KITTY_SDL_RENDERER_NOT_INITIALIZED; // SDL renderer not initialized
+    }
+
+    Uint32* pixels = (Uint32*)texture->sdl_surface->pixels;
+    for (int y = 0; y < texture->sdl_surface->h; y++){
+        for (int x = 0; x < texture->sdl_surface->w; x++){
+            //enlarge 4x
+            Uint32 color = pixels[y * (texture->sdl_surface->pitch / 4) + x];
+            Uint8 r, g, b, a;
+            SDL_GetRGBA(color, texture->sdl_surface->format, &r, &g, &b, &a);
+            for (int py = 0; py < scale; py++){
+                for (int px = 0; px < scale; px++){
+                    SDL_SetRenderDrawColor(sdl_renderer, r, g, b, 255);
+                    SDL_RenderDrawPoint(sdl_renderer, position.x + x * scale + px, position.y + y * scale + py);
+                }
+            }
+        }
+    }
+
+    return KITTY_SUCCESS; // Success
 }
 
 // MEMORY STUFF

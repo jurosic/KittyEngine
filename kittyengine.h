@@ -28,6 +28,7 @@ enum Kitty_ErrorCodes {
     KITTY_SDL_WINDOW_NOT_INITIALIZED = 2,
     KITTY_SDL_RENDERER_NOT_INITIALIZED = 3,
     KITTY_SDL_LOCK_TEXTURE_ERROR = 4,
+    KITTY_FILE_NOT_FOUND = 5,
 
     KITTY_MEMORY_ALLOCATION_FAILURE = 100,
     KITTY_MEMORYSPACE_NOT_INITIALIZED = 101,
@@ -208,6 +209,7 @@ int Kitty_AddFaceToObjMesh(Kitty_Object* obj, Kitty_Face face, Kitty_Color face_
 int Kitty_AddUVToObjMesh(Kitty_Object* obj, Kitty_UV uv);
 
 Kitty_Texture* Kitty_LoadTexture(const char* file_path);
+int Kitty_LoadDotObj(FILE* file, Kitty_Object* mesh);
 
 size_t Kitty_GetFrameNumber();
 clock_t Kitty_GetDeltaTime();
@@ -224,5 +226,8 @@ Kitty_Object* Kitty_CreatePixel(Kitty_Point position, Kitty_Color color);
 Kitty_Object* Kitty_CreateMesh();
 Kitty_Object* Kitty_CreateText(Kitty_Point position, float rotation, float size, Kitty_Color color, const char* text);
 
+
+int KittyD_DrawMeshUVMap(Kitty_Point position, int scale, Kitty_ObjMesh* mesh);
+int KittyD_DrawTexture(Kitty_Point position, int scale, Kitty_Texture* texture);
 
 #endif // KITTYENGINE_H
