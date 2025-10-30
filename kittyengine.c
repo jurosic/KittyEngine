@@ -390,28 +390,32 @@ int Kitty_RenderObjects() {
                     uv3u = uv3u * persp_3;
                     uv3v = uv3v * persp_3;
 
-                    SDL_SetRenderDrawColor(sdl_renderer, face_col.r, face_col.g, face_col.b, face_col.a);
+                    if (m_obj->wire){
+                        SDL_SetRenderDrawColor(sdl_renderer, face_col.r, face_col.g, face_col.b, face_col.a);
 
-                    SDL_RenderDrawLine(sdl_renderer,
-                                       position.x + (v1x * scale),
-                                       position.y + (v1y * scale),
-                                       position.x + (v2x * scale),
-                                       position.y + (v2y * scale));
-                        
-                    SDL_RenderDrawLine(sdl_renderer,
-                                       position.x + (v2x * scale),
-                                       position.y + (v2y * scale),
-                                       position.x + (v3x * scale),
-                                       position.y + (v3y * scale));
+                        SDL_RenderDrawLine(sdl_renderer,
+                                        position.x + (v1x * scale),
+                                        position.y + (v1y * scale),
+                                        position.x + (v2x * scale),
+                                        position.y + (v2y * scale));
+                            
+                        SDL_RenderDrawLine(sdl_renderer,
+                                        position.x + (v2x * scale),
+                                        position.y + (v2y * scale),
+                                        position.x + (v3x * scale),
+                                        position.y + (v3y * scale));
 
-                    SDL_RenderDrawLine(sdl_renderer,
-                                       position.x + (v3x * scale),
-                                       position.y + (v3y * scale),
-                                       position.x + (v1x * scale),
-                                       position.y + (v1y * scale));
+                        SDL_RenderDrawLine(sdl_renderer,
+                                        position.x + (v3x * scale),
+                                        position.y + (v3y * scale),
+                                        position.x + (v1x * scale),
+                                        position.y + (v1y * scale));
+                    }
 
 
                     if (!m_obj->wire && !m_obj->wrap){
+                        SDL_SetRenderDrawColor(sdl_renderer, face_col.r, face_col.g, face_col.b, face_col.a);
+
                         //simple scanline fill
                         int minY = (position.y + (v1y * scale)) < (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
                         int maxY = (position.y + (v1y * scale)) > (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
