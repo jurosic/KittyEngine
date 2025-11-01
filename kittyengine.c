@@ -5,6 +5,10 @@
 #include <sys/time.h>
 #include <math.h>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 
 #include "kittyengine.h"
 
@@ -31,6 +35,11 @@ static clock_t timer_1 = 0;
 //SDL VARS
 static SDL_Window* sdl_window = NULL;
 static SDL_Renderer* sdl_renderer = NULL;
+
+// Rendering Vars
+
+static Kitty_Vertex3D k_camera_position = {10.0f, 0.0f, 0.0f};
+static Kitty_Point3D k_camera_origin = {0.0f, 0.0f, 0.0f};
 
 ///@brief Creates the memory space (dynamic array) that houses objects.
 static int k_CreateObjectMSpace();
@@ -361,15 +370,6 @@ int Kitty_RenderObjects() {
                     float uv3u = uv3.u;
                     float uv3v = uv3.v;
 
-                    /*float uv1u = 0;
-                    float uv1v = 0;
-
-                    float uv2u = 0;
-                    float uv2v = 0;
-
-                    float uv3u = 0;
-                    float uv3v = 0;*/
-
                     //apply perspective
                     float distance = 100.0f; // Distance from the viewer to the projection plane
                     float persp_1 = distance / (distance + v1z - position.z);
@@ -389,6 +389,27 @@ int Kitty_RenderObjects() {
                     uv2v = uv2v * persp_2;
                     uv3u = uv3u * persp_3;
                     uv3v = uv3v * persp_3;
+
+                    //calculate face normals
+                    Kitty_Vertex3D edge1 = KittyM_Point2PointV3(v2, v1);
+                    Kitty_Vertex3D edge2 = KittyM_Point2PointV3(v3, v1);
+                    Kitty_Vertex3D face_normal = KittyM_CrossProduct3(edge1, edge2);
+                    face_normal = KittyM_VectorNormalize3(face_normal);
+
+                    //backface culling
+                    Kitty_Vertex3D view_vector = KittyM_Point2PointV3(k_camera_position, (Kitty_Vertex3D){position.x, position.y, position.z});
+                    view_vector = KittyM_VectorNormalize3(view_vector);
+                    float dot_product = KittyM_DotProduct3(face_normal, view_vector);
+                    if (dot_product < 0){
+                        continue; //skip face
+                    }
+
+                    //copied vertices
+                    Kitty_Point3D* vertices[3] = {
+                        &(Kitty_Point3D){position.x + (v1x * scale), position.y + (v1y * scale), position.z + (v1.z * scale)},
+                        &(Kitty_Point3D){position.x + (v2x * scale), position.y + (v2y * scale), position.z + (v2.z * scale)},
+                        &(Kitty_Point3D){position.x + (v3x * scale), position.y + (v3y * scale), position.z + (v3.z * scale)}
+                    };
 
                     if (m_obj->wire){
                         SDL_SetRenderDrawColor(sdl_renderer, face_col.r, face_col.g, face_col.b, face_col.a);
@@ -423,11 +444,6 @@ int Kitty_RenderObjects() {
                         for (int y = minY; y <= maxY; y++){
                             int nodes = 0;
                             int nodeX[3];
-                            Kitty_Point3D* vertices[3] = {
-                                &(Kitty_Point3D){position.x + (v1x * scale), position.y + (v1y * scale), position.z + (v1.z * scale)},
-                                &(Kitty_Point3D){position.x + (v2x * scale), position.y + (v2y * scale), position.z + (v2.z * scale)},
-                                &(Kitty_Point3D){position.x + (v3x * scale), position.y + (v3y * scale), position.z + (v3.z * scale)}
-                            };
                             for (int i = 0; i < 3; i++){
                                 Kitty_Point3D* v1p = vertices[i];
                                 Kitty_Point3D* v2p = vertices[(i + 1) % 3];
@@ -448,13 +464,6 @@ int Kitty_RenderObjects() {
                     else if (m_obj->wrap) {
                         int minY = (position.y + (v1y * scale)) < (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) < (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
                         int maxY = (position.y + (v1y * scale)) > (position.y + (v2y * scale)) ? ((position.y + (v1y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v1y * scale)) : (position.y + (v3y * scale))) : ((position.y + (v2y * scale)) > (position.y + (v3y * scale)) ? (position.y + (v2y * scale)) : (position.y + (v3y * scale)));
-
-                        // screen-space vertices
-                        Kitty_Point3D* vertices[3] = {
-                            &(Kitty_Point3D){position.x + (v1x * scale), position.y + (v1y * scale), position.z + (v1.z * scale)},
-                            &(Kitty_Point3D){position.x + (v2x * scale), position.y + (v2y * scale), position.z + (v2.z * scale)},
-                            &(Kitty_Point3D){position.x + (v3x * scale), position.y + (v3y * scale), position.z + (v3.z * scale)}
-                        };
 
                         // perspective-correct setup:
                         // uv1u/v, uv2u/v, uv3u/v were pre-multiplied by persp_1/2/3 earlier
@@ -749,6 +758,51 @@ bool Kitty_Timer1Trip(long milliseconds) {
     return elapsed_time >= milliseconds;
 }
 
+void Kitty_RotateCamera(float angle_x, float angle_y, float angle_z) {
+    //rotate k_camera_position aroind k_camera_origin by angle_x, angle_y, angle_z (in degrees)
+    Kitty_Vertex3D dir = {
+        k_camera_position.x - k_camera_origin.x,
+        k_camera_position.y - k_camera_origin.y,
+        k_camera_position.z - k_camera_origin.z
+    };
+    // Rotate around X axis
+    float cos_x = cosf(angle_x);
+    float sin_x = sinf(angle_x);
+    float y1 = dir.y * cos_x - dir.z * sin_x;
+    float z1 = dir.y * sin_x + dir.z * cos_x;
+    dir.y = y1;
+    dir.z = z1;
+    // Rotate around Y axis
+    float cos_y = cosf(angle_y);
+    float sin_y = sinf(angle_y);
+    float x2 = dir.x * cos_y + dir.z * sin_y;
+    float z2 = -dir.x * sin_y + dir.z * cos_y;
+    dir.x = x2;
+    dir.z = z2;
+    // Rotate around Z axis
+    float cos_z = cosf(angle_z);
+    float sin_z = sinf(angle_z);
+    float x3 = dir.x * cos_z - dir.y * sin_z;
+    float y3 = dir.x * sin_z + dir.y * cos_z;
+    dir.x = x3;
+    dir.y = y3;
+    k_camera_position.x = k_camera_origin.x + dir.x;
+    k_camera_position.y = k_camera_origin.y + dir.y;
+    k_camera_position.z = k_camera_origin.z + dir.z;
+}
+
+Kitty_Vertex3D Kitty_GetCameraPosition() {
+    return k_camera_position;
+}
+
+void Kitty_SetCameraPosition(Kitty_Vertex3D position) {
+    k_camera_position = position;
+}
+
+void Kitty_SetCameraOrigin(Kitty_Point3D origin) {
+    k_camera_origin = origin;
+}
+
 Kitty_Object* Kitty_CreateCircle(Kitty_Point position, float radius, bool filled, Kitty_Color color) {
     Kitty_Object* obj = (Kitty_Object*)malloc(sizeof(Kitty_Object));
     if (!obj) {
@@ -893,6 +947,134 @@ Kitty_Object* Kitty_CreateText(Kitty_Point position, float size, float rotation,
     }
     return obj;
 }
+
+int Kitty_Transform(Kitty_Object* obj, Kitty_Point3D translation, Kitty_Vertex3D rotation) {
+    if (!obj) {
+        return KITTY_INVALID_OBJECT_INDEX; // Invalid object
+    }
+    if (obj->type != KITTY_OBJECT_MESH) {
+        return KITTY_INVALID_OBJECT_INDEX; // Invalid object type
+    }
+    Kitty_ObjMesh* mesh = (Kitty_ObjMesh*)obj->data;
+
+    // Apply translation
+    mesh->position.x += translation.x;
+    mesh->position.y += translation.y;
+    mesh->position.z += translation.z;
+
+    //apply rotation around origin
+    for (size_t i = 0; i < mesh->vertex_count; i++){
+        Kitty_Vertex3D v = mesh->vertices[i];
+
+        // Translate vertex to origin
+        v.x -= mesh->origin.x;
+        v.y -= mesh->origin.y;
+        v.z -= mesh->origin.z;
+
+        // Rotate around X axis
+        v = KittyM_RotateVertex3D_X(v, rotation.x);
+        // Rotate around Y axis
+        v = KittyM_RotateVertex3D_Y(v, rotation.y);
+        // Rotate around Z axis
+        v = KittyM_RotateVertex3D_Z(v, rotation.z);
+
+        // Translate vertex back
+        v.x += mesh->origin.x;
+        v.y += mesh->origin.y;
+        v.z += mesh->origin.z;
+
+        mesh->vertices[i] = v;
+    }
+
+    return KITTY_SUCCESS; // Success
+}
+
+Kitty_Vertex3D KittyM_CalculateMeshCenter(Kitty_ObjMesh* mesh){
+    Kitty_Vertex3D center = {0, 0, 0};
+    for (size_t i = 0; i < mesh->vertex_count; i++){
+        center.x += mesh->vertices[i].x;
+        center.y += mesh->vertices[i].y;
+        center.z += mesh->vertices[i].z;
+    }
+    center.x /= mesh->vertex_count;
+    center.y /= mesh->vertex_count;
+    center.z /= mesh->vertex_count;
+    return center;
+}
+
+float KittyM_DotProduct3(Kitty_Vertex3D v1, Kitty_Vertex3D v2){
+    return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
+}
+
+float KittyM_VectorLength3(Kitty_Vertex3D v){
+    return sqrtf((v.x * v.x) + (v.y * v.y) + (v.z * v.z));
+}
+
+Kitty_Vertex3D KittyM_CrossProduct3(Kitty_Vertex3D v1, Kitty_Vertex3D v2){
+    return (Kitty_Vertex3D){
+        .x = (v1.y * v2.z) - (v1.z * v2.y),
+        .y = (v1.z * v2.x) - (v1.x * v2.z),
+        .z = (v1.x * v2.y) - (v1.y * v2.x)
+    };
+}
+
+Kitty_Vertex3D KittyM_Point2PointV3(Kitty_Vertex3D from, Kitty_Vertex3D to){
+    Kitty_Vertex3D result;
+    result.x = to.x - from.x;
+    result.y = to.y - from.y;
+    result.z = to.z - from.z;
+    return result;
+}
+
+Kitty_Vertex3D KittyM_VectorNormalize3(Kitty_Vertex3D v){
+    float length = KittyM_VectorLength3(v);
+    if (length == 0){
+        return (Kitty_Vertex3D){0, 0, 0}; // avoid div by zero
+    }
+    return (Kitty_Vertex3D){
+        .x = v.x / length,
+        .y = v.y / length,
+        .z = v.z / length
+    };
+}
+
+Kitty_Vertex3D KittyM_RotateVertex3D_X(Kitty_Vertex3D v, float angle){
+        angle = angle * (M_PI / 180.0f); // convert to radians
+
+    float cosA = cosf(angle);
+    float sinA = sinf(angle);
+    return (Kitty_Vertex3D){
+        .x = v.x,
+        .y = v.y * cosA - v.z * sinA,
+        .z = v.y * sinA + v.z * cosA
+    };
+}
+
+Kitty_Vertex3D KittyM_RotateVertex3D_Y(Kitty_Vertex3D v, float angle){
+    angle = angle * (M_PI / 180.0f); // convert to radians
+
+    float cosA = cosf(angle);
+    float sinA = sinf(angle);
+    return (Kitty_Vertex3D){
+        .x = v.x * cosA + v.z * sinA,
+        .y = v.y,
+        .z = -v.x * sinA + v.z * cosA
+    };
+}
+
+Kitty_Vertex3D KittyM_RotateVertex3D_Z(Kitty_Vertex3D v, float angle){
+    angle = angle * (M_PI / 180.0f); // convert to radians
+
+
+    float cosA = cosf(angle);
+    float sinA = sinf(angle);
+    return (Kitty_Vertex3D){
+        .x = v.x * cosA - v.y * sinA,
+        .y = v.x * sinA + v.y * cosA,
+        .z = v.z
+    };
+}
+
 
 int KittyD_DrawMeshUVMap(Kitty_Point position, int scale, Kitty_ObjMesh* mesh){
     if (!sdl_renderer){

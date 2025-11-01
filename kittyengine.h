@@ -136,6 +136,7 @@ typedef struct {
 
 typedef struct {
     Kitty_Point3D position;
+    Kitty_Vertex3D origin;
     float scale;
     bool wrap;
     bool wire;
@@ -218,6 +219,11 @@ double Kitty_GetFrameTime();
 void Kitty_SetTimer1();
 bool Kitty_Timer1Trip(long miliseconds);
 
+void Kitty_RotateCamera(float angle_x, float angle_y, float angle_z);
+Kitty_Vertex3D Kitty_GetCameraPosition();
+void Kitty_SetCameraPosition(Kitty_Vertex3D position);
+void Kitty_SetCameraOrigin(Kitty_Point3D origin);
+
 Kitty_Object* Kitty_CreateCircle(Kitty_Point position, float radius, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreateRectangle(Kitty_Point position, int width, int height, bool filled, Kitty_Color color);
 Kitty_Object* Kitty_CreateLine(Kitty_Point startPosition, Kitty_Point endPosition, Kitty_Color color);
@@ -226,6 +232,17 @@ Kitty_Object* Kitty_CreatePixel(Kitty_Point position, Kitty_Color color);
 Kitty_Object* Kitty_CreateMesh();
 Kitty_Object* Kitty_CreateText(Kitty_Point position, float rotation, float size, Kitty_Color color, const char* text);
 
+int Kitty_Transform(Kitty_Object* obj, Kitty_Point3D translation, Kitty_Vertex3D rotation);
+
+Kitty_Vertex3D KittyM_CalculateMeshCenter(Kitty_ObjMesh* mesh);
+float KittyM_DotProduct3(Kitty_Vertex3D v1, Kitty_Vertex3D v2);
+float KittyM_VectorLength3(Kitty_Vertex3D v);
+Kitty_Vertex3D KittyM_Point2PointV3(Kitty_Vertex3D from, Kitty_Vertex3D to);
+Kitty_Vertex3D KittyM_CrossProduct3(Kitty_Vertex3D v1, Kitty_Vertex3D v2);
+Kitty_Vertex3D KittyM_VectorNormalize3(Kitty_Vertex3D v);
+Kitty_Vertex3D KittyM_RotateVertex3D_X(Kitty_Vertex3D v, float angle);
+Kitty_Vertex3D KittyM_RotateVertex3D_Y(Kitty_Vertex3D v, float angle);
+Kitty_Vertex3D KittyM_RotateVertex3D_Z(Kitty_Vertex3D v, float angle);
 
 int KittyD_DrawMeshUVMap(Kitty_Point position, int scale, Kitty_ObjMesh* mesh);
 int KittyD_DrawTexture(Kitty_Point position, int scale, Kitty_Texture* texture);
